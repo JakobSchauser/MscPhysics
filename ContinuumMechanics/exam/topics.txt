@@ -15,15 +15,15 @@ Selected chapters from Zohdi 2015 as pdf's.
 
 Continuum dynamics
 Ch. 12 & 20.1 (Ch 24.1-24.2)
+
+(nearly) Ideal flows incl. Sverdrup balance (optionally compressible flows - not necessary)
 Ch. 13 (+note on sverdrup balance)
 (optionally Ch 14.1 + beginning of 14.2)
 
-(nearly) Ideal flows incl. Sverdrup balance (optionally compressible flows - not necessary)
+Viscous flows
 Ch. 15 viscosity
 Ch. 16.1-16.4 channels&pipes
-Ch 25.1 - 25.3 gravity waves
-Dion's note on shallow water eqns
-
-Viscous flows
 
 Stokes flows + channels and pipes
+Ch 25.1 - 25.3 gravity waves
+Dion's note on shallow water eqns
