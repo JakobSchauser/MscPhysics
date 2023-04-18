@@ -1,2 +1,2 @@
 # MscPhysics
-My master in Physics in Complex Systems
+My Master in Physics of Complex Systems
