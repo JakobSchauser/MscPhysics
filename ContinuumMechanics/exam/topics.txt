@@ -22,8 +22,10 @@ Ch. 13 (+note on sverdrup balance)
 
 Viscous flows
 Ch. 15 viscosity
-Ch. 16.1-16.4 channels&pipes
+
 
 Stokes flows + channels and pipes
+Ch. 17.1,17.2
+Ch. 16.1-16.4 channels&pipes
 Ch 25.1 - 25.3 gravity waves
 Dion's note on shallow water eqns
