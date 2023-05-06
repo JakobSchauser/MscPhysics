@@ -70,12 +70,6 @@ class DAG():
         nx.draw(G, pos = pos, node_size=1500, node_color="skyblue", edge_color="black", width=3, font_size=fs, font_weight='bold', arrowsize=20, with_labels=True)
         nx.draw_networkx_edge_labels(G, pos = pos, edge_labels=edge_labels, font_size=fs, font_weight='bold')
 
-        # net = Network(notebook=True,  cdn_resources='in_line')
-        # net.from_nx(G)
-        # net.show("dag.html")
-
-        # draw edge labels
-
         plt.show()
 
     def adj2edges(self):
@@ -88,7 +82,7 @@ class DAG():
 
 
     def all_paths_between(self, a, b):
-        edges = adj2edges(self.adjacency_matrix)
+        edges = self.adj2edges()
         allpaths = []
         self.find_all_paths(allpaths, edges, a, b)
         return allpaths
@@ -107,11 +101,11 @@ class DAG():
 
                 p1 = np.prod([self.adjacency_matrix[edge[0], edge[1]] for edge in path1])  
                 p2 = np.prod([self.adjacency_matrix[edge[0], edge[1]] for edge in path2])
-                p_total = p1 * p2 * dag.biass[i]             
+                p_total = p1 * p2 * self.biass[i]             
 
                 val += p_total
 
-        val += dag.biass[node]
+        val += self.biass[node]
 
         return val
 
@@ -139,7 +133,7 @@ class DAG():
             for root in roots:
                 visited.append(root)
                 # add bias
-                values[root] += np.random.normal(0, dag.biass[root], N)
+                values[root] += np.random.normal(0, self.biass[root], N)
 
                 # propagate values
                 for node, weigth in enumerate(adj[root, :]):
