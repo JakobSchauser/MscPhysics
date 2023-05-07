@@ -75,7 +75,7 @@ class DAG:
         return adjacency_matrix.astype(int)
 
     def plot(self):
-        plt.figure(figsize=(10,10))
+        plt.figure(figsize=(8,8))
         G = nx.DiGraph(self.adjacency_matrix)
         edge_labels = nx.get_edge_attributes(G, 'weight')
 
