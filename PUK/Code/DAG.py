@@ -64,27 +64,24 @@ class DAG:
                     hadnone = False
             
         # make sure each node has at least one parent
-        for i in range(roots,n):
+        for i in range(roots, n):
             if np.sum(adjacency_matrix[:, i]) == 0:
-                j = np.random.randint(0, n)
-                for _ in range(n):
-                    if j == i or adjacency_matrix[i, j] == 1:
-                        j = (j + 1) % n
-                adjacency_matrix[j, i] = 1
-        
+                adjacency_matrix[np.random.randint(0, i), i] = 1
+                
+        # make sure roots have no parents
         for i in range(roots):
             adjacency_matrix[:, i] = 0
 
         return adjacency_matrix.astype(int)
 
     def plot(self):
+        plt.figure(figsize=(10,10))
         G = nx.DiGraph(self.adjacency_matrix)
         edge_labels = nx.get_edge_attributes(G, 'weight')
 
         pos=nx.spring_layout(G)
-
-        fs = 20
-        nx.draw(G, pos = pos, node_size=1500, node_color="skyblue", edge_color="black", width=3, font_size=fs, font_weight='bold', arrowsize=20, with_labels=True)
+        fs = 15
+        nx.draw(G, pos = pos, node_size=1000, node_color="skyblue", edge_color="black", width=3, font_size=fs, font_weight='bold', arrowsize=10, with_labels=True)
         nx.draw_networkx_edge_labels(G, pos = pos, edge_labels=edge_labels, font_size=fs, font_weight='bold')
 
         plt.show()
