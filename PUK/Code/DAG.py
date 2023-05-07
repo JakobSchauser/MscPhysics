@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from itertools import product
 from pyvis.network import Network
 
-class DAG():
-    def __init__(self, adjacency_matrix = None, biass = None, n = 5, strength = 2, roots = 1):
+class DAG:
+    def __init__(self, adjacency_matrix = None, biass = None, n = 5, strength = 2, roots = 1, precalculate_paths = False):
         assert n > 0, "n must be greater than 0"
         assert roots > 0, "roots must be greater than 0"
         if biass is not None:
@@ -26,6 +26,23 @@ class DAG():
         else:
             self.biass = np.ones(n)
 
+        self.paths = []
+
+        self.precalculated_paths = precalculate_paths
+        if precalculate_paths:
+            self.precalculate_paths()
+
+    def precalculate_paths(self):
+        pths = np.empty((self.size, self.size), dtype = object)
+        for i in range(self.size):
+            for j in range(self.size):
+                if i == j:
+                    pths[i,j] = []
+                    continue
+
+                pths[i,j] = self.all_paths_between(i, j)
+
+        self.paths = pths.copy()
 
     def random_dag(self, n = 5, strength = 2, roots = 1):
         adjacency_matrix = np.zeros((n, n))
@@ -35,12 +52,12 @@ class DAG():
             for j in range(i+1, n):
                 edge = np.random.randint(0, strength)
                 
-                if j < roots and i < roots:
-                    edge = 0
+            
 
                 if (j == n-1) and hadnone:
                     edge = np.random.randint(1, strength)
-                
+                if j < roots and i < roots:
+                    edge = 0
                 adjacency_matrix[i, j] = edge
                 
                 if edge > 0:
@@ -78,14 +95,13 @@ class DAG():
             for j in range(self.adjacency_matrix.shape[1]):
                 if abs(self.adjacency_matrix[i, j]) > 0:
                     edges.append((i, j))
-        return edges
+        return np.array(edges).copy()
 
 
     def all_paths_between(self, a, b):
         edges = self.adj2edges()
-        allpaths = []
-        self.find_all_paths(allpaths, edges, a, b)
-        return allpaths
+        allpths = self.find_all_paths(edges, a, b)
+        return allpths
     
     
     def var_node(self, node):
@@ -93,7 +109,11 @@ class DAG():
 
         val = 0
         for i in range(0, self.size):
-            allpaths = self.all_paths_between(i, node)
+            if self.precalculated_paths:
+                allpaths = self.paths[i, node]
+            else:
+                allpaths = self.all_paths_between(i, node)
+
         
             for path1, path2 in product(allpaths, allpaths):
                 if len(path1) == 0 or len(path2) == 0:
@@ -109,15 +129,18 @@ class DAG():
 
         return val
 
-    def find_all_paths(self, allpaths, edges, src, dest, path = []):
+
+    def find_all_paths(self, edges, src, dest):
         if (src == dest):
-            allpaths.append(np.array(path).copy())
+            return [[]]
         else:
+            paths = []
             for adjnode in filter(lambda x: x[0] == src, edges):
-                path.append(adjnode)
-                self.find_all_paths(allpaths, edges, adjnode[1], dest, path)
-                path.pop()
-            
+                for path in self.find_all_paths(edges, adjnode[1], dest):
+                    paths.append([adjnode] + path)
+            return paths
+
+    
     def simulate(self, N = 100):
         adj = self.adjacency_matrix.copy()
         values = np.zeros((self.size, N))
