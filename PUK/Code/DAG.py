@@ -74,6 +74,32 @@ class DAG:
 
         return adjacency_matrix.astype(int)
 
+    def get_varsortability(self, analytical = False, simulated = False, N = 1000):
+        assert analytical or simulated, "must calculate at least one of analytical or simulated"
+        _return = {}
+        if analytical:
+            ana = self.get_analytical_var()
+            analytical = self.varsortability(ana)
+            _return["analytical"] = analytical
+        if simulated:
+            sim = self.get_simulated_var(N).round()
+            simulated = self.varsortability(sim)
+            _return["simulated"] = simulated
+
+        return _return
+
+    def varsortability(self, means):
+        N = np.sum(self.adjacency_matrix)
+        sortable = 0
+        for i in range(self.size):
+            for j in range(self.size):
+                if not abs(self.adjacency_matrix[i,j]) > 0:
+                    continue
+
+                if np.sign(self.adjacency_matrix[i,j]) == np.sign(means[j] - means[i]):
+                    sortable += 1
+        return sortable / N
+
     def plot(self):
         plt.figure(figsize=(8,8))
         G = nx.DiGraph(self.adjacency_matrix)
@@ -101,7 +127,7 @@ class DAG:
         return allpths
     
     
-    def var_node(self, node):
+    def analytical_var_node(self, node):
         assert node < self.size and node >= 0, "node out of bounds"
 
         val = 0
@@ -126,6 +152,8 @@ class DAG:
 
         return val
 
+    def get_analytical_var(self):
+        return np.array([self.analytical_var_node(i) for i in range(self.size)])
 
     def find_all_paths(self, edges, src, dest):
         if (src == dest):
@@ -137,8 +165,10 @@ class DAG:
                     paths.append([adjnode] + path)
             return paths
 
-    
-    def simulate(self, N = 100):
+    def get_simulated_var(self, N = 100):
+        return self.get_simulated_data(N).var(axis = 1)
+
+    def get_simulated_data(self, N = 100):
         adj = self.adjacency_matrix.copy()
         values = np.zeros((self.size, N))
         visited = []
