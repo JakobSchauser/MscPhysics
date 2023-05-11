@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from itertools import product
 from pyvis.network import Network
 
+
 class DAG:
     def __init__(self, adjacency_matrix = None, biass = None, n = 5, strength = 2, roots = 1, precalculate_paths = False):
         assert n > 0, "n must be greater than 0"
@@ -208,7 +209,7 @@ class DAG:
         return self.get_simulated_data(N).var(axis = 1)
 
     def mutate(self):
-        _adja = self.adjacency_matrix.copy()
+        self._adja = self.adjacency_matrix.copy()
 
         # mutate edges
         for i in range(self.size):
@@ -218,12 +219,13 @@ class DAG:
                 if self.adjacency_matrix[i, j] == 0:
                     continue
                 if np.random.uniform(0, 1) < 0.1:
-                    edge = np.random.uniform(-self.strength, self.strength)
-                    _adja[i, j] = edge
+                    edge = np.random.uniform(0.5, self.strength) * np.random.choice([-1, 1])
+                    self._adja[i, j] = edge
+                else:
+                    self._adja[i, j] = self.adjacency_matrix[i, j]
 
         # make child
-        child = DAG(n = self.size, adjacency_matrix = _adja, biass = self.biass)
-        child.adjacency_matrix = _adja
+        child = DAG(n = self.size, adjacency_matrix = self._adja, biass = self.biass, s)
         return child
 
     def get_simulated_data(self, N = 100):
