@@ -14,6 +14,9 @@ class DAG:
             else:
                 assert len(biass) == n, "biass must be of size n"
 
+        self.strength = strength
+        self.roots = roots
+
         if adjacency_matrix is not None:
             self.adjacency_matrix = adjacency_matrix
             self.size = adjacency_matrix.shape[0]
@@ -50,12 +53,14 @@ class DAG:
         for i in range(n):
             hadnone = True
             for j in range(i+1, n):
-                edge = np.random.randint(0, strength)
-                
+                if np.random.randint(0, 2) == 0:
+                    edge = np.random.uniform(-strength, strength)
+                else:
+                    edge = 0
             
 
                 if (j == n-1) and hadnone:
-                    edge = np.random.randint(1, strength)
+                    edge = np.random.uniform(1, strength) * np.random.choice([-1, 1])
                 if j < roots and i < roots:
                     edge = 0
                 adjacency_matrix[i, j] = edge
@@ -72,7 +77,7 @@ class DAG:
         for i in range(roots):
             adjacency_matrix[:, i] = 0
 
-        return adjacency_matrix.astype(int)
+        return adjacency_matrix
 
     def get_varsortability(self, analytical = False, simulated = False, N = 1000):
         assert analytical or simulated, "must calculate at least one of analytical or simulated"
@@ -82,24 +87,59 @@ class DAG:
             analytical = self.varsortability(ana)
             _return["analytical"] = analytical
         if simulated:
-            sim = self.get_simulated_var(N).round()
+            sim = self.get_simulated_var(N)
             simulated = self.varsortability(sim)
             _return["simulated"] = simulated
 
         return _return
 
-    def varsortability(self, means):
-        N = np.sum(self.adjacency_matrix)
+    def get_continous_varsortability(self, analytical = False, simulated = False, N = 1000):
+        assert analytical or simulated, "must calculate at least one of analytical or simulated"
+        _return = {}
+        if analytical:
+            ana = self.get_analytical_var()
+            analytical = self.continous_varsortability(ana)
+            _return["analytical"] = analytical
+        if simulated:
+            sim = self.get_simulated_var(N)
+            simulated = self.continous_varsortability(sim)
+            _return["simulated"] = simulated
+
+        return _return
+
+    def varsortability(self, variances):
+        N = 0
         sortable = 0
+        if not self.precalculated_paths:
+            self.precalculate_paths()
+
         for i in range(self.size):
             for j in range(self.size):
-                if not abs(self.adjacency_matrix[i,j]) > 0:
+                if i == j:
                     continue
+                for p in self.paths[i,j]:
+                    N += 1
+                    if variances[p[0][0]] < variances[p[-1][1]]:
+                        sortable += 1
+                    elif variances[p[0][0]] == variances[p[-1][1]]:
+                        sortable += 0.5
 
-                if np.sign(self.adjacency_matrix[i,j]) == np.sign(means[j] - means[i]):
-                    sortable += 1
         return sortable / N
 
+    def continous_varsortability(self, variances):
+        numerator = 0
+        for i in range(self.size):
+            for j in range(self.size):
+                if i == j:
+                    continue
+
+                if self.adjacency_matrix[i, j] == 0:
+                    continue
+                
+                numerator += (variances[j] - variances[i]) 
+
+        return numerator / np.sum(self.adjacency_matrix != 0) / np.sum(np.abs(variances))
+        
     def plot(self):
         plt.figure(figsize=(8,8))
         G = nx.DiGraph(self.adjacency_matrix)
@@ -130,14 +170,13 @@ class DAG:
     def analytical_var_node(self, node):
         assert node < self.size and node >= 0, "node out of bounds"
 
+        if not self.precalculated_paths:
+            self.precalculate_paths()
+
         val = 0
         for i in range(0, self.size):
-            if self.precalculated_paths:
-                allpaths = self.paths[i, node]
-            else:
-                allpaths = self.all_paths_between(i, node)
-
-        
+            allpaths = self.paths[i, node]
+            
             for path1, path2 in product(allpaths, allpaths):
                 if len(path1) == 0 or len(path2) == 0:
                     continue
@@ -167,6 +206,25 @@ class DAG:
 
     def get_simulated_var(self, N = 100):
         return self.get_simulated_data(N).var(axis = 1)
+
+    def mutate(self):
+        _adja = self.adjacency_matrix.copy()
+
+        # mutate edges
+        for i in range(self.size):
+            for j in range(self.size):
+                if i == j:
+                    continue
+                if self.adjacency_matrix[i, j] == 0:
+                    continue
+                if np.random.uniform(0, 1) < 0.1:
+                    edge = np.random.uniform(-self.strength, self.strength)
+                    _adja[i, j] = edge
+
+        # make child
+        child = DAG(n = self.size, adjacency_matrix = _adja, biass = self.biass)
+        child.adjacency_matrix = _adja
+        return child
 
     def get_simulated_data(self, N = 100):
         adj = self.adjacency_matrix.copy()
