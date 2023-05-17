@@ -52,23 +52,16 @@ class DAG:
         adjacency_matrix = np.zeros((n, n))
 
         for i in range(n):
-            hadnone = True
             for j in range(i+1, n):
                 if np.random.randint(0, 2) == 0:
                     edge = np.random.uniform(-strength, strength)
                 else:
                     edge = 0
-            
 
-                if (j == n-1) and hadnone:
-                    edge = np.random.uniform(1, strength) * np.random.choice([-1, 1])
                 if j < roots and i < roots:
                     edge = 0
                 adjacency_matrix[i, j] = edge
                 
-                if edge > 0:
-                    hadnone = False
-            
         # make sure each node has at least one parent
         for i in range(roots, n):
             if np.sum(adjacency_matrix[:, i]) == 0:
@@ -136,10 +129,11 @@ class DAG:
 
                 if self.adjacency_matrix[i, j] == 0:
                     continue
-                
-                numerator += (variances[j] - variances[i]) 
+                if (variances[i] + variances[j]) == 0:
+                    print("WTH")
+                numerator += int(np.sign(variances[j] - variances[i]) > 0) + (variances[j] - variances[i]) / np.max([variances[j] + variances[i], 1e-10])
 
-        return numerator / np.sum(self.adjacency_matrix != 0) / np.sum(np.abs(variances))
+        return numerator 
         
     def plot(self):
         plt.figure(figsize=(8,8))
@@ -209,8 +203,7 @@ class DAG:
         return self.get_simulated_data(N).var(axis = 1)
 
     def mutate(self):
-        self._adja = self.adjacency_matrix.copy()
-
+        _adja = self.adjacency_matrix.copy().astype(float)
         # mutate edges
         for i in range(self.size):
             for j in range(self.size):
@@ -218,14 +211,19 @@ class DAG:
                     continue
                 if self.adjacency_matrix[i, j] == 0:
                     continue
-                if np.random.uniform(0, 1) < 0.1:
+
+                if np.random.uniform(0, 1) < 0.5:
                     edge = np.random.uniform(0.5, self.strength) * np.random.choice([-1, 1])
-                    self._adja[i, j] = edge
+                    _adja[i, j] = edge
                 else:
-                    self._adja[i, j] = self.adjacency_matrix[i, j]
+                    edge = self.adjacency_matrix[i, j]
+                    _adja[i, j] = self.adjacency_matrix[i, j]
+
+                if edge == 0:
+                    print("edge is 0", i, j)
 
         # make child
-        child = DAG(n = self.size, adjacency_matrix = self._adja, biass = self.biass, s)
+        child = DAG(n = self.size, adjacency_matrix = _adja, biass = self.biass, strength = self.strength)
         return child
 
     def get_simulated_data(self, N = 100):
