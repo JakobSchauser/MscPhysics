@@ -76,7 +76,11 @@ def solve_least_squares(A, b, print_upper = False):
 
     # We can simply use the vectors (no need for using a matrix)
     for v in vs.T:
-        c -= 2 * v * np.dot(v,c)/np.dot(v,v)
+        vv = np.dot(v,v)
+        if vv == 0:
+            continue
+        c -= 2 * v * np.dot(v,c)/vv
+
 
     # solve R1x = c1 as described in the book
     c1 = c[:R1.shape[1]]
