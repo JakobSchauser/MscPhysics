@@ -4,68 +4,52 @@ def same(a,b):
     return np.isclose(a,b).all()
 
 
-def lu_factorize(M, should_pivot=True):
-    assert M.shape[0] == M.shape[1], "Matrix should be square"
+def householder_fast(A):
+    # a lot of this is copied from the slow version
+    m, n = A.shape
+    I = lambda: np.eye(m).astype(float)
 
-    # helper function for generating identity matrix
-    I = lambda: np.eye(M.shape[0]).astype(float)
+    # initialize R and V
+    R = A.copy()
+    V = np.zeros(( A.shape[0]+1, A.shape[1])).T # transposing for easier indexing later
 
-    # I am very scared of numpy-stuff being mutable :(
-    U = M.copy()
+    for k in range(min(A.shape)):
+        # Need to zero out the lower part of the k'th column to get in the right shape
+        vk = np.zeros(m)
 
-    # get ready for generating L (needed when pivoting)
-    Ls = np.empty((M.shape[0]-1,*M.shape))
-    Ps = np.empty((M.shape[0]-1,*M.shape))
+        # copy the lower part of the k'th column
+        vk[k:] = R[k:, k].copy()
+
+        # subtract "a_k" in the k'th column
+        vk[k] -= -np.sign(vk[k]) * np.linalg.norm(vk)    # fortegnsfejl i bogen?
+
+        beta = np.dot(vk, vk)
+        
+        if beta == 0:
+            continue
+
+        # make the transformation matrix
+        H = I() - 2 * np.outer(vk, vk) / beta
+        
+        # apply it, but only to R
+        R = H@R
+
+        # save vk (this works because of the transposing earlier)
+        V[k,1:] = vk
     
-    for i in range(M.shape[0]-1):
-        # pivot
-        P = I()
-        if should_pivot:
-        # find best row
-            best = np.argmax(U[i:,i]) + i # compensate for looking at submatrix
+    # re-transpose (is that a word?)
+    V = V.T
 
-            # swap
-            P[[i,best]] = P[[best,i]]
-
-            # apply
-            U = P@U
-
-        # save for generating L
-        Ps[i] = P
-
-        # eliminate
-        coeff = I()
-
-        # find coefficients
-        cc = -U[(i+1):,i]/U[i,i]
-        coeff[(i+1):,i] = cc
-
-        # apply
-        U = coeff@U
-
-        # save for generating L
-        coeff[(i+1):,i] = -cc
-        Ls[i] = coeff
+    # make R same shape as V
+    R = np.vstack((R, np.zeros_like(R[0])))
     
-    # generate L
-    L = I()
-    for ii in range(len(Ps))[::-1]:
-        L = Ls[ii]@L
-        L = Ps[ii].T@L
+    # add V and R for the final result
+    VR = V + R
+    
+    # assert same(np.linalg.qr(A)[1], R[:min(A.shape),:min(A.shape)]), "R is wrong"
 
+    return VR
 
-    assert same(L@U, M), "Decomposition did not work"
-
-    return U, L
-
-
-def forward_substitute(L, z):
-    y = np.empty_like(z)
-
-    for k in range(L.shape[0]):
-        y[k] = z[k] - np.dot(L[k, 0:k], y[0:k])
-
-    return y
 
 
 def backward_substitute(U, y):
@@ -76,10 +60,27 @@ def backward_substitute(U, y):
     return x
 
 
-def solve(M, z):
-    U, L = lu_factorize(M, should_pivot=False)
-    y = forward_substitute(L, z)
-    x = backward_substitute(U, y)
-    assert same(x, np.linalg.solve(M,z)), "Numpy says solution is wrong"
-    assert same(M@x, z), "x is not a solution"
+
+def solve_least_squares(A, b, print_upper = False):
+    # find V an R
+    VR = householder_fast(A.copy())
+    R1 = np.triu(VR)[:A.shape[1],:]
+    vs = np.tril(VR, -1)[1:,:]
+    if print_upper:
+        print("R1")
+        print(R1)
+
+    # we dont want to modify b
+    c = b.copy()
+
+
+    # We can simply use the vectors (no need for using a matrix)
+    for v in vs.T:
+        c -= 2 * v * np.dot(v,c)/np.dot(v,v)
+
+    # solve R1x = c1 as described in the book
+    c1 = c[:R1.shape[1]]
+    x = backward_substitute(R1, c1)
+ 
+    # assert same(x, np.linalg.lstsq(A,b, rcond = None)[0]), "Numpy says solution is wrong"
     return x
